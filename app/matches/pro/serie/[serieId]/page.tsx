@@ -16,40 +16,66 @@ interface SerieTournamentListItem {
   end_at: string | null;
 }
 
-async function fetchSerieData(serieId: string) {
+/**
+ * Discriminator so we can tell the difference between "PandaScore says this
+ * serie doesn't exist" and "we couldn't reach PandaScore" — the UI treats
+ * them differently.
+ */
+type FetchOutcome<T> =
+  | { kind: 'ok'; data: T }
+  | { kind: 'not-found' }
+  | { kind: 'unavailable'; status?: number };
+
+async function fetchSerieData(serieId: string): Promise<
+  FetchOutcome<{ stages: StageData[]; tournamentsList: SerieTournamentListItem[] }>
+> {
   const token = process.env.PANDASCORE_API_KEY;
-  if (!token) return null;
+  if (!token) return { kind: 'unavailable' };
 
   const headers = {
     Authorization: `Bearer ${token}`,
     Accept: 'application/json',
   };
 
-  const fetchJson = async (url: string) => {
+  // Bumped revalidate 60 → 300s so we hit PandaScore less often (and get
+  // less rate-limit exposure on the free tier).
+  const fetchJson = async (url: string): Promise<{ ok: true; data: unknown } | { ok: false; status: number }> => {
     try {
-      const res = await fetch(url, { headers, next: { revalidate: 60 } });
-      if (!res.ok) return null;
-      return res.json();
+      const res = await fetch(url, { headers, next: { revalidate: 300 } });
+      if (!res.ok) return { ok: false, status: res.status };
+      return { ok: true, data: await res.json() };
     } catch {
-      return null;
+      return { ok: false, status: 0 };
     }
   };
 
   // Fetch all tournaments in this serie
-  const tournamentsList = (await fetchJson(
-    `https://api.pandascore.co/series/${serieId}/tournaments?per_page=25`
-  )) as SerieTournamentListItem[] | null;
-
-  if (!tournamentsList || tournamentsList.length === 0) return null;
+  const tourRes = await fetchJson(
+    `https://api.pandascore.co/series/${serieId}/tournaments?per_page=25`,
+  );
+  if (!tourRes.ok) {
+    // 404 = real not-found; everything else (429/500/network) = temporary
+    return tourRes.status === 404
+      ? { kind: 'not-found' }
+      : { kind: 'unavailable', status: tourRes.status };
+  }
+  const tournamentsList = tourRes.data as SerieTournamentListItem[] | null;
+  if (!tournamentsList || tournamentsList.length === 0) {
+    return { kind: 'not-found' };
+  }
 
   // Fetch details + brackets for each tournament in parallel
   const stagePromises = tournamentsList.map(async (t) => {
-    const [detail, brackets, standingsRes] = await Promise.all([
-      fetchJson(`https://api.pandascore.co/tournaments/${t.id}`) as Promise<PSTournament | null>,
-      fetchJson(`https://api.pandascore.co/tournaments/${t.id}/brackets`) as Promise<PSBracketMatch[] | null>,
-      fetchJson(`https://api.pandascore.co/tournaments/${t.id}/standings`) as Promise<PSStanding[] | null>,
+    const [detailRes, bracketsRes, standingsRes] = await Promise.all([
+      fetchJson(`https://api.pandascore.co/tournaments/${t.id}`),
+      fetchJson(`https://api.pandascore.co/tournaments/${t.id}/brackets`),
+      fetchJson(`https://api.pandascore.co/tournaments/${t.id}/standings`),
     ]);
-    return { detail, brackets, standings: standingsRes };
+    return {
+      detail: detailRes.ok ? (detailRes.data as PSTournament) : null,
+      brackets: bracketsRes.ok ? (bracketsRes.data as PSBracketMatch[]) : null,
+      standings: standingsRes.ok ? (standingsRes.data as PSStanding[]) : null,
+    };
   });
 
   const stageResults = await Promise.all(stagePromises);
@@ -60,7 +86,7 @@ async function fetchSerieData(serieId: string) {
     const tournament = result.detail;
     const bracketMatches = result.brackets;
     const bracket = bracketMatches ? parseBracket(bracketMatches) : null;
-    const prizePool = (tournament as any).prizepool as string | undefined;
+    const prizePool = (tournament as { prizepool?: string }).prizepool;
     stages.push({
       tournament,
       matches: tournament.matches || [],
@@ -71,16 +97,20 @@ async function fetchSerieData(serieId: string) {
     });
   }
 
-  if (stages.length === 0) return null;
+  if (stages.length === 0) {
+    // Tournament list existed but we couldn't fetch any details — likely
+    // rate limit / transient failure, not a genuine empty serie.
+    return { kind: 'unavailable' };
+  }
 
-  return { stages, tournamentsList };
+  return { kind: 'ok', data: { stages, tournamentsList } };
 }
 
 export default async function Page({ params }: { params: Promise<{ serieId: string }> }) {
   const { serieId } = await params;
-  const data = await fetchSerieData(serieId);
+  const outcome = await fetchSerieData(serieId);
 
-  if (!data) {
+  if (outcome.kind === 'not-found') {
     return (
       <div className="max-w-5xl mx-auto px-4">
         <div className="bg-surface rounded-xl border border-border p-8">
@@ -93,7 +123,31 @@ export default async function Page({ params }: { params: Promise<{ serieId: stri
     );
   }
 
-  const { stages } = data;
+  if (outcome.kind === 'unavailable') {
+    return (
+      <div className="max-w-5xl mx-auto px-4">
+        <div className="bg-surface rounded-xl border border-border p-8">
+          <h1 className="text-lg font-semibold text-warning mb-2">
+            Data temporarily unavailable
+          </h1>
+          <p className="text-text-secondary text-sm">
+            Our upstream data provider is rate-limiting us right now
+            {outcome.status ? ` (HTTP ${outcome.status})` : ''}. Match data will
+            reappear automatically within a few minutes. This is not a real
+            &quot;not found&quot; error — the serie exists.
+          </p>
+          <Link
+            href="/"
+            className="text-accent hover:underline mt-4 inline-block text-sm"
+          >
+            &larr; Back to Events
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const { stages } = outcome.data;
   const firstStage = stages[0];
   const league = firstStage.tournament.league;
   const serie = firstStage.tournament.serie;
