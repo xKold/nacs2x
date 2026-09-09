@@ -3,6 +3,41 @@ import SocialsCard from '@/app/components/SocialsCard';
 
 const ROADMAP: { title: string; bullets: string[] }[] = [
   {
+    title: 'Player Transfer Portal (NA)',
+    bullets: [
+      'Admin-editable current rosters for NA teams (overrides Valve VRS snapshot)',
+      'Public transfers timeline — chronological HLTV-style feed of player moves',
+      'Recent-transfers widget on each team page',
+      'Automatic detection via daily PandaScore/FACEIT roster snapshots, admin-reviewed before publishing',
+      'NA-only scope',
+    ],
+  },
+  {
+    title: 'Team Page Overhaul (HLTV-style)',
+    bullets: [
+      'Recent matches table with W/L, opponent, map, score',
+      'Head-to-head history vs specific opponents',
+      'Roster history (feeds off the transfer portal)',
+      'Per-map win rates',
+    ],
+  },
+  {
+    title: 'Player Page Overhaul (HLTV-style)',
+    bullets: [
+      'Rating, impact, opening kills, clutch stats',
+      'Per-map breakdown, performance trends, head-to-head records',
+    ],
+  },
+  {
+    title: 'Historical Ranking Tracking',
+    bullets: [
+      'Monthly snapshots of every region’s VRS list stored in the database',
+      'Rank trend indicators on each team ("↑ 3 spots since last drop")',
+      'Sparkline of a team’s ranking history on their team page',
+      'Enabled once we’ve collected a few months of snapshots',
+    ],
+  },
+  {
     title: 'Match Page Enhancements',
     bullets: [
       'BO1 display: hide "Overall" tab when only 1 map',
@@ -18,17 +53,27 @@ const ROADMAP: { title: string; bullets: string[] }[] = [
     ],
   },
   {
-    title: 'Player Page Overhaul (HLTV-style)',
-    bullets: [
-      'Rating, impact, opening kills, clutch stats',
-      'Per-map breakdown, performance trends, head-to-head records',
-    ],
-  },
-  {
     title: 'Auto-Fetch ESEA Events',
     bullets: [
       'ESEA Organizer ID: 08b06cfc-74d0-454b-9a51-feda4b6b18da',
       'Replace hardcoded static/events.ts with dynamic fetching',
+    ],
+  },
+  {
+    title: 'Mobile Polish',
+    bullets: [
+      'Denser layouts for the rankings table, playoff brackets, and standings on small screens',
+      'Touch-friendly tap targets and expand affordances',
+      'Horizontal-scroll bracket refinement so it never overflows the page body',
+    ],
+  },
+  {
+    title: 'Reliability & Rate-Limit Resilience',
+    bullets: [
+      'Background cache warmups so the site stays fast even when upstream APIs throttle',
+      'Longer cache windows on tournament and serie pages',
+      'Clearer "temporarily unavailable" states in place of misleading "not found" pages',
+      'Persistent last-known-good snapshots served from the database when upstream is down',
     ],
   },
 ];
