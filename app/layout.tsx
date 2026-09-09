@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import SearchBar from './components/SearchBar';
+import { Analytics } from '@vercel/analytics/next';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const [scrolled, setScrolled] = useState(false);
@@ -107,6 +108,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <footer className="mt-20 pb-8 text-center text-xs text-text-muted">
           Powered by North American Counter Strike
         </footer>
+        <Analytics />
       </body>
     </html>
   );
