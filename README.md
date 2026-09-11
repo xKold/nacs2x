@@ -26,6 +26,22 @@ A CS2 esports statistics and event tracking platform built for the North America
 
 ## Tech Stack
 
-- Next.js 16 / React 19 / TypeScript
+- Next.js 16 (App Router) / React 19 / TypeScript
 - Tailwind CSS 4
-- Firebase Hosting + Cloud Functions
+- Neon serverless Postgres — cached team and player metadata (30–60 day TTL)
+- Vercel — hosting, per-branch preview deployments, Incremental Static Regeneration
+
+## How It Works
+
+- **One stats schema, three providers.** Each provider has its own normalizer
+  (`lib/normalizers/`) that maps its response into a shared `NormalizedMatchStats`
+  type and reports which stat columns it can supply, so a single table component
+  renders data from any source.
+- **Postgres metadata cache.** Team logos and countries are looked up from
+  PandaScore and FACEIT once, then served from Neon. Only successful lookups are
+  cached, so a rate-limited response is never stored as "no data".
+- **NA/SA classification.** Valve publishes one Americas ranking. Teams are split
+  into North and South America using provider country data, accent-insensitive
+  name matching, and an override list.
+- **Failure-aware fetching.** An upstream 404 shows "not found"; a rate limit or
+  server error shows "temporarily unavailable" instead.
