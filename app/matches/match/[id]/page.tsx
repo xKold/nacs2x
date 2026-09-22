@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import MatchStatsTable from '@/app/components/MatchStatsTable';
 import { normalizeFaceitStats } from '@/lib/normalizers/faceit-stats';
+import { isRealFaceitTeamId } from '@/lib/faceit-team';
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -105,7 +106,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                   {team1Name.slice(0, 2).toUpperCase()}
                 </span>
               </div>
-              {team1Id && championshipId ? (
+              {isRealFaceitTeamId(team1Id) && championshipId ? (
                 <Link
                   href={`/teams/${team1Id}?championship=${championshipId}`}
                   className="font-bold text-lg sm:text-xl text-center truncate max-w-full text-text hover:text-accent transition-colors"
@@ -144,7 +145,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                   {team2Name.slice(0, 2).toUpperCase()}
                 </span>
               </div>
-              {team2Id && championshipId ? (
+              {isRealFaceitTeamId(team2Id) && championshipId ? (
                 <Link
                   href={`/teams/${team2Id}?championship=${championshipId}`}
                   className="font-bold text-lg sm:text-xl text-center truncate max-w-full text-text hover:text-accent transition-colors"

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { fetchProPlayerData, checkProPlayerExists } from '@/lib/pro-player-api';
+import { isRealFaceitTeamId } from '@/lib/faceit-team';
 import PlayerViewTabs from './PlayerViewTabs';
 import PlayerProOverview from './PlayerProOverview';
 
@@ -103,7 +104,7 @@ export default async function PlayerPage({
   ];
 
   const playerTeams: any[] = (teamsData?.items ?? []).filter(
-    (t: any) => t.game === 'cs2'
+    (t: any) => t.game === 'cs2' && isRealFaceitTeamId(t.team_id)
   );
 
   const allHistory: any[] = history?.items ?? [];

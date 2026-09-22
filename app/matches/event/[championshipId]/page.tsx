@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import EventBracket, { type BracketData, type MatchScoreMap } from './EventBracket';
+import { isRealFaceitTeamId } from '@/lib/faceit-team';
 
 interface TeamStanding {
   team_id: string;
@@ -112,7 +113,7 @@ export default async function Page({ params }: { params: Promise<{ championshipI
     for (const sub of subsData.items) {
       const teamId = sub.team?.team_id ?? sub.team_id;
       const name = sub.team?.name ?? sub.team?.nickname ?? 'Unknown';
-      if (teamId) {
+      if (isRealFaceitTeamId(teamId)) {
         standingsMap.set(teamId, {
           team_id: teamId,
           name,
@@ -129,7 +130,7 @@ export default async function Page({ params }: { params: Promise<{ championshipI
   for (const match of allMatches) {
     for (const faction of ['faction1', 'faction2'] as const) {
       const team = match.teams?.[faction];
-      if (team?.faction_id && !standingsMap.has(team.faction_id)) {
+      if (isRealFaceitTeamId(team?.faction_id) && !standingsMap.has(team.faction_id)) {
         standingsMap.set(team.faction_id, {
           team_id: team.faction_id,
           name: team.name ?? 'Unknown',

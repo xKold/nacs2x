@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { notFound } from 'next/navigation';
 import { fetchProTeamData, checkProTeamExists } from '@/lib/pro-team-api';
+import { isRealFaceitTeamId } from '@/lib/faceit-team';
 import TeamViewTabs from './TeamViewTabs';
 import ProOverview from './ProOverview';
 
@@ -13,6 +15,12 @@ export default async function TeamPage({
 }) {
   const { teamId } = await params;
   const { championship, view } = await searchParams;
+
+  // Cheap 404 for bracket placeholders like /teams/bye — skip the FACEIT
+  // fetch entirely so crawlers hitting stray links don't burn API quota.
+  if (!isRealFaceitTeamId(teamId)) {
+    notFound();
+  }
 
   const headers = {
     Authorization: `Bearer ${process.env.FACEIT_API_KEY}`,
